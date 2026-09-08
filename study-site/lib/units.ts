@@ -56,7 +56,7 @@ export const units: Unit[] = [
     title: "Road Construction Works 1",
     blurb: "Full unit Q&A pack.",
     marks: "10-mark CAT style",
-    price: 50,
+    price: 40,
     docLink: "https://docs.google.com/document/d/1oAOqPuTYHpK1KmMEO5XE6rauzFsWIKbq/edit?usp=sharing&ouid=107384047421044338728&rtpof=true&sd=true",
   },
 ];
