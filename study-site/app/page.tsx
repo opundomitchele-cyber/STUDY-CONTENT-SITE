@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { units, bundle } from "../lib/units";
+import { modules } from "../lib/units";
 
 declare global {
   interface Window {
@@ -25,7 +25,7 @@ function useCheckout() {
     const handler = window.PaystackPop.setup({
       key: publicKey,
       email,
-      amount: price * 100, // kobo/cents
+      amount: price * 100,
       currency: "KES",
       ref: `${productId}-${Date.now()}`,
       callback: (response: { reference: string }) => {
@@ -59,15 +59,16 @@ function useCheckout() {
 export default function Home() {
   const { pay, busyId, error } = useCheckout();
   const [email, setEmail] = useState("");
+  const [openModule, setOpenModule] = useState<string | null>(modules[0]?.id ?? null);
 
   return (
     <main>
       <section className="hero">
-        <span className="eyebrow">MODULE 2 — CAT REVISION</span>
-        <h1>Six units. Real exam-style questions. Answers you can trust before the CAT.</h1>
+        <span className="eyebrow">CAT REVISION</span>
+        <h1>Real exam-style questions and notes. Answers you can trust before the CAT.</h1>
         <p className="sub">
-          Q&amp;A packs built the way your lecturer actually sets papers — conceptual review in
-          Unit 1, calculation-heavy worked examples from Unit 2 onward.
+          Pick a module below to see its units — Q&amp;A packs and revision notes built the way
+          your lecturer actually sets papers.
         </p>
       </section>
 
@@ -84,45 +85,65 @@ export default function Home() {
 
       {error && <p className="error">{error}</p>}
 
-      <section className="grid">
-        {units.map((u, i) => (
-          <article className="card" key={u.id}>
-            <div className="card-top">
-              <span className="unit-no">{String(i + 1).padStart(2, "0")}</span>
-              <span className="marks-tag">{u.marks}</span>
-            </div>
-            <h3>{u.title}</h3>
-            <p>{u.blurb}</p>
-            <div className="card-bottom">
-              <span className="price">KSh {u.price}</span>
-              <button
-                disabled={!email || busyId === u.id}
-                onClick={() => pay(u.id, u.price, email)}
-              >
-                {busyId === u.id ? "Opening..." : "Buy"}
-              </button>
-            </div>
-          </article>
-        ))}
-
-        <article className="card bundle">
-          <div className="card-top">
-            <span className="unit-no">ALL</span>
-            <span className="marks-tag">Best value</span>
-          </div>
-          <h3>{bundle.title}</h3>
-          <p>{bundle.blurb}</p>
-          <div className="card-bottom">
-            <span className="price">KSh {bundle.price}</span>
+      {modules.map((mod) => {
+        const isOpen = openModule === mod.id;
+        return (
+          <section className="module" key={mod.id}>
             <button
-              disabled={!email || busyId === bundle.id}
-              onClick={() => pay(bundle.id, bundle.price, email)}
+              className="module-header"
+              onClick={() => setOpenModule(isOpen ? null : mod.id)}
+              aria-expanded={isOpen}
             >
-              {busyId === bundle.id ? "Opening..." : "Buy bundle"}
+              <span>{mod.title}</span>
+              <span className="chevron">{isOpen ? "−" : "+"}</span>
             </button>
-          </div>
-        </article>
-      </section>
+
+            {isOpen && (
+              <div className="module-body">
+                <div className="grid">
+                  {mod.units.map((u, i) => (
+                    <article className="card" key={u.id}>
+                      <div className="card-top">
+                        <span className="unit-no">{String(i + 1).padStart(2, "0")}</span>
+                        <span className="marks-tag">{u.marks}</span>
+                      </div>
+                      <h3>{u.title}</h3>
+                      <p>{u.blurb}</p>
+                      <div className="card-bottom">
+                        <span className="price">KSh {u.price}</span>
+                        <button
+                          disabled={!email || busyId === u.id}
+                          onClick={() => pay(u.id, u.price, email)}
+                        >
+                          {busyId === u.id ? "Opening..." : "Buy"}
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+
+                  <article className="card bundle">
+                    <div className="card-top">
+                      <span className="unit-no">ALL</span>
+                      <span className="marks-tag">Best value</span>
+                    </div>
+                    <h3>{mod.bundle.title}</h3>
+                    <p>{mod.bundle.blurb}</p>
+                    <div className="card-bottom">
+                      <span className="price">KSh {mod.bundle.price}</span>
+                      <button
+                        disabled={!email || busyId === mod.bundle.id}
+                        onClick={() => pay(mod.bundle.id, mod.bundle.price, email)}
+                      >
+                        {busyId === mod.bundle.id ? "Opening..." : "Buy bundle"}
+                      </button>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            )}
+          </section>
+        );
+      })}
 
       <footer>
         <p>Paid via Paystack. Your link is sent instantly and stays open for 72 hours.</p>
@@ -142,6 +163,12 @@ export default function Home() {
         .email-gate input:focus-visible { outline: 2px solid var(--blueprint); outline-offset: 1px; }
 
         .error { color: #b3261e; margin-bottom: 1.5rem; }
+
+        .module { border: 1px solid var(--paper-line); border-radius: 10px; margin-bottom: 1rem; overflow: hidden; background: #fff; }
+        .module-header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; background: var(--paper); border: none; cursor: pointer; font-family: "Space Grotesk", sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); text-align: left; }
+        .module-header:hover { background: #f0ead9; }
+        .chevron { font-size: 1.4rem; color: var(--blueprint); line-height: 1; }
+        .module-body { padding: 1.25rem; }
 
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
 
