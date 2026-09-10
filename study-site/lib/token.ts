@@ -42,7 +42,7 @@ export function issueToken(productId: string, hoursValid: number): string {
 
 export function verifyToken(
   token: string
-): { valid: true; productId: string } | { valid: false; reason: string } {
+  ): { valid: true; productId: string; reason?: undefined } | { valid: false; reason: string; productId?: undefined } {
   const parts = token.split(".");
   if (parts.length !== 2) {
     return { valid: false, reason: "This link looks malformed." };
