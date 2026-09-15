@@ -13,6 +13,11 @@ function useCheckout() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  function cleanupPaystackFrames() {
+    document.querySelectorAll('iframe[src*="paystack"]').forEach((el) => el.remove());
+    document.querySelectorAll('div[id*="paystack" i]').forEach((el) => el.remove());
+  }
+
   function pay(productId: string, price: number, email: string) {
     const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
     if (!publicKey) {
@@ -21,6 +26,7 @@ function useCheckout() {
     }
     setError(null);
     setBusyId(productId);
+    cleanupPaystackFrames();
 
     const handler = window.PaystackPop.setup({
       key: publicKey,
@@ -29,6 +35,7 @@ function useCheckout() {
       currency: "KES",
       ref: `${productId}-${Date.now()}`,
       callback: (response: { reference: string }) => {
+        cleanupPaystackFrames();
         fetch("/api/verify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -48,7 +55,10 @@ function useCheckout() {
             setError("Payment went through but something failed. Contact us with your reference.");
           });
       },
-      onClose: () => setBusyId(null),
+      onClose: () => {
+        cleanupPaystackFrames();
+        setBusyId(null);
+      },
     });
     handler.openIframe();
   }

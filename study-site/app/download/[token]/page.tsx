@@ -32,14 +32,32 @@ export default function DownloadPage({ params }: { params: { token: string } }) 
     <main className="wrap">
       <h1>Your study pack{items.length > 1 ? "s" : ""}</h1>
       <p className="note">This link stays active for 72 hours from purchase.</p>
-      <ul className="links">
-        {items.map((u) => (
-          <li key={u.id}>
-            <a href={u.docLink} target="_blank" rel="noopener noreferrer">
-              {u.title} — open document →
-            </a>
-          </li>
-        ))}
+           <ul className="links">
+        {items.map((u) =>
+          u.docLink ? (
+            <li key={u.id}>
+              <a href={u.docLink} target="_blank" rel="noopener noreferrer">
+                {u.title} — open document →
+              </a>
+            </li>
+          ) : (
+            <li key={u.id} className="unit-group">
+              <span className="unit-name">{u.title}</span>
+              <div className="unit-tabs">
+                {u.notesLink && (
+                  <a href={u.notesLink} target="_blank" rel="noopener noreferrer">
+                    Notes →
+                  </a>
+                )}
+                {u.qnaLink && (
+                  <a href={u.qnaLink} target="_blank" rel="noopener noreferrer">
+                    Q&amp;A Pack →
+                  </a>
+                )}
+              </div>
+            </li>
+          )
+        )}
       </ul> 
       <style>{`
         .wrap { max-width: 560px; margin: 4rem auto; padding: 0 1.5rem; font-family: system-ui, sans-serif; color: #1C1F26; }
@@ -47,6 +65,10 @@ export default function DownloadPage({ params }: { params: { token: string } }) 
         .note { color: #6b6f76; margin-bottom: 1.5rem; }
         .links { list-style: none; padding: 0; display: flex; flex-direction: column; gap: .75rem; }
         .links a { display: block; padding: 1rem 1.25rem; background: #F7F4EC; border: 1px solid #e3ddcc; border-radius: 8px; color: #2B4C7E; font-weight: 600; text-decoration: none; }
+                .unit-group { padding: 1rem 1.25rem; background: #F7F4EC; border: 1px solid #e3ddcc; border-radius: 8px; }
+        .unit-name { display: block; font-weight: 600; margin-bottom: .6rem; }
+        .unit-tabs { display: flex; gap: .75rem; }
+        .unit-tabs a { padding: .4rem .8rem; }
         .links a:hover { border-color: #2B4C7E; }
       `}</style>
     </main>
