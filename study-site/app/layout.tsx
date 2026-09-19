@@ -1,4 +1,4 @@
-import "./globals.css";
+import Script from "next/script";
 
 export const metadata = {
   title: "Module 2 Q&A Packs — Civil Engineering CAT Prep",
@@ -15,9 +15,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
           rel="stylesheet"
         />
-        <script src="https://js.paystack.co/v1/inline.js"></script>
-      </head>
-      <body>{children}</body>
+             </head>
+      <body>
+  {children}
+  <Script src="https://js.paystack.co/v1/inline.js" strategy="afterInteractive" />
+</body>
     </html>
   );
 }
