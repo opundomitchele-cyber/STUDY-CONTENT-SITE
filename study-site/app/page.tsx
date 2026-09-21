@@ -2,74 +2,16 @@
 
 import { useState } from "react";
 import { modules } from "../lib/units";
+const POCHI_NUMBER = "0759187464";
+const WHATSAPP_NUMBER = "254759187464";
 
-declare global {
-  interface Window {
-    PaystackPop: any;
-  }
-}
-
-function useCheckout() {
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  function cleanupPaystackFrames() {
-    document.querySelectorAll('iframe[src*="paystack"]').forEach((el) => el.remove());
-    document.querySelectorAll('div[id*="paystack" i]').forEach((el) => el.remove());
-  }
-
-  function pay(productId: string, price: number, email: string) {
-    const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
-    if (!publicKey) {
-      setError("Payments aren't configured yet.");
-      return;
-    }
-    setError(null);
-    setBusyId(productId);
-    cleanupPaystackFrames();
-
-    const handler = window.PaystackPop.setup({
-      key: publicKey,
-      email,
-      amount: price * 100,
-      currency: "KES",
-      ref: `${productId}-${Date.now()}`,
-      callback: (response: { reference: string }) => {
-        cleanupPaystackFrames();
-        fetch("/api/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reference: response.reference, productId }),
-        })
-          .then((r) => r.json())
-          .then((data) => {
-            setBusyId(null);
-            if (data.downloadUrl) {
-              window.location.href = data.downloadUrl;
-            } else {
-              setError(data.error || "Payment went through but the link failed. Contact us.");
-            }
-          })
-          .catch(() => {
-            setBusyId(null);
-            setError("Payment went through but something failed. Contact us with your reference.");
-          });
-      },
-      onClose: () => {
-        cleanupPaystackFrames();
-        setBusyId(null);
-      },
-    });
-    handler.openIframe();
-  }
-
-  return { pay, busyId, error };
+function buildWhatsAppLink(productId: string, title: string, price: number) {
+  const message = `Hi! I've paid KSh ${price} via Pochi/M-Pesa to ${POCHI_NUMBER} for "${title}" (ref: ${productId}). Here's my payment confirmation — please send my download link.`;
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
 
 export default function Home() {
-  const { pay, busyId, error } = useCheckout();
-  const [email, setEmail] = useState("");
-  const [openModule, setOpenModule] = useState<string | null>(modules[0]?.id ?? null);
+  const [openModule, setOpenModuleState] = useState<string | null>(modules[0]?.id ?? null);
 
   return (
     <main>
@@ -82,18 +24,14 @@ export default function Home() {
         </p>
       </section>
 
-      <section className="email-gate">
-        <label htmlFor="email">Email for your receipt &amp; link</label>
-        <input
-          id="email"
-          type="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+      <section className="payment-info">
+        <p>
+          <strong>Send payment to:</strong> Pochi la Biashara / M-Pesa — <strong>{POCHI_NUMBER}</strong>
+        </p>
+        <p className="payment-sub">
+          After paying, tap "Buy" on your module — it opens WhatsApp with your confirmation message ready to send.
+        </p>
       </section>
-
-      {error && <p className="error">{error}</p>}
 
       {modules.map((mod) => {
         const isOpen = openModule === mod.id;
@@ -101,7 +39,7 @@ export default function Home() {
           <section className="module" key={mod.id}>
             <button
               className="module-header"
-              onClick={() => setOpenModule(isOpen ? null : mod.id)}
+              onClick={() => setOpenModuleState(isOpen ? null : mod.id)}
               aria-expanded={isOpen}
             >
               <span>{mod.title}</span>
@@ -121,12 +59,13 @@ export default function Home() {
                       <p>{u.blurb}</p>
                       <div className="card-bottom">
                         <span className="price">KSh {u.price}</span>
-                        <button
-                          disabled={!email || busyId === u.id}
-                          onClick={() => pay(u.id, u.price, email)}
+                        <a
+                          href={buildWhatsAppLink(u.id, u.title, u.price)}
+                          target="_blank"
+                          rel="noopener noreferrer"
                         >
-                          {busyId === u.id ? "Opening..." : "Buy"}
-                        </button>
+                          Buy
+                        </a>
                       </div>
                     </article>
                   ))}
@@ -140,12 +79,13 @@ export default function Home() {
                     <p>{mod.bundle.blurb}</p>
                     <div className="card-bottom">
                       <span className="price">KSh {mod.bundle.price}</span>
-                      <button
-                        disabled={!email || busyId === mod.bundle.id}
-                        onClick={() => pay(mod.bundle.id, mod.bundle.price, email)}
+                      <a
+                        href={buildWhatsAppLink(mod.bundle.id, mod.bundle.title, mod.bundle.price)}
+                        target="_blank"
+                        rel="noopener noreferrer"
                       >
-                        {busyId === mod.bundle.id ? "Opening..." : "Buy bundle"}
-                      </button>
+                        Buy bundle
+                      </a>
                     </div>
                   </article>
                 </div>
@@ -156,7 +96,7 @@ export default function Home() {
       })}
 
       <footer>
-        <p>Paid via Paystack. Your link is sent instantly and stays open for 72 hours.</p>
+        <p>Pay via M-Pesa/Pochi, confirm on WhatsApp. Your link is sent within a few hours and stays open for 72 hours.</p>
       </footer>
 
       <style>{`
@@ -167,12 +107,10 @@ export default function Home() {
         h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.15; margin: 0 0 1rem; color: var(--ink); }
         .sub { color: var(--muted); font-size: 1.05rem; max-width: 55ch; margin: 0; }
 
-        .email-gate { display: flex; flex-direction: column; gap: .4rem; max-width: 360px; margin-bottom: 2rem; }
-        .email-gate label { font-family: "Space Grotesk", sans-serif; font-size: .8rem; color: var(--muted); }
-        .email-gate input { padding: .7rem .9rem; border: 1px solid var(--paper-line); border-radius: 6px; background: #fff; font-family: inherit; font-size: 1rem; }
-        .email-gate input:focus-visible { outline: 2px solid var(--blueprint); outline-offset: 1px; }
-
-        .error { color: #b3261e; margin-bottom: 1.5rem; }
+        .payment-info { border: 1px solid var(--paper-line); background: #f0ead9; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 2rem; }
+        .payment-info p { margin: 0; }
+        .payment-info p + p { margin-top: .4rem; }
+        .payment-sub { color: var(--muted); font-size: .9rem; }
 
         .module { border: 1px solid var(--paper-line); border-radius: 10px; margin-bottom: 1rem; overflow: hidden; background: #fff; }
         .module-header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; background: var(--paper); border: none; cursor: pointer; font-family: "Space Grotesk", sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); text-align: left; }
@@ -190,9 +128,8 @@ export default function Home() {
         .card p { margin: 0; color: var(--muted); font-size: .92rem; flex-grow: 1; }
         .card-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: .9rem; border-top: 1px dashed var(--paper-line); }
         .price { font-family: "Space Grotesk", sans-serif; font-weight: 600; }
-        button { background: var(--blueprint); color: #fff; border: none; padding: .55rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; }
-        button:hover:not(:disabled) { background: var(--blueprint-deep); }
-        button:disabled { background: #c7c9cd; cursor: not-allowed; }
+        .card-bottom a { background: #16a34a; color: #fff; border: none; padding: .55rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; }
+        .card-bottom a:hover { background: #15803d; }
 
         .card.bundle { border-color: var(--amber); background: linear-gradient(180deg, #fff 0%, #fdf6ea 100%); }
         .card.bundle .unit-no { color: #a0672a; }
