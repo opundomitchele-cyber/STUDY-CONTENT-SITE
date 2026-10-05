@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { modules } from "../lib/units";
 
 const POCHI_NUMBER = "0759187464";
@@ -11,9 +11,11 @@ function buildWhatsAppLink(
   title: string,
   price: number,
   buyerName: string,
-  mpesaMessage: string
+  mpesaMessage: string,
+  ref: string | null
 ) {
-  const message = `Hi, I'm ${buyerName}. I've paid KSh ${price} via Pochi/M-Pesa to ${POCHI_NUMBER} for "${title}" (ref: ${productId}).\n\nHere's my M-Pesa confirmation:\n${mpesaMessage}\n\nPlease send my download link.`;
+  const refLine = ref ? `\nReferred by: ${ref}` : "";
+  const message = `Hi, I'm ${buyerName}. I've paid KSh ${price} via Pochi/M-Pesa to ${POCHI_NUMBER} for "${title}" (ref: ${productId}).${refLine}\n\nHere's my M-Pesa confirmation:\n${mpesaMessage}\n\nPlease send my download link.`;
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
 
@@ -26,6 +28,20 @@ export default function Home() {
   const [openModule, setOpenModuleState] = useState<string | null>(modules[0]?.id ?? null);
   const [buyerName, setBuyerName] = useState("");
   const [mpesaMessage, setMpesaMessage] = useState("");
+  const [ref, setRef] = useState<string | null>(null);
+
+  useEffect(() => {
+    const r = new URLSearchParams(window.location.search).get("ref");
+    if (r) {
+      const clean = r.slice(0, 30);
+      setRef(clean);
+      fetch("/api/track-ref", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ref: clean }),
+      }).catch(() => {});
+    }
+  }, []);
 
   const canBuy = buyerName.trim().length > 0 && mpesaMessage.trim().length > 0;
 
@@ -96,11 +112,7 @@ export default function Home() {
                       <div className="card-bottom">
                         <span className="price">KSh {u.price}</span>
                         {canBuy ? (
-                          <a
-                            href={buildWhatsAppLink(u.id, u.title, u.price, buyerName.trim(), mpesaMessage.trim())}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
+                          <a href={buildWhatsAppLink(u.id, u.title, u.price, buyerName.trim(), mpesaMessage.trim(), ref)} target="_blank" rel="noopener noreferrer">
                             Buy
                           </a>
                         ) : (
@@ -122,11 +134,7 @@ export default function Home() {
                     <div className="card-bottom">
                       <span className="price">KSh {mod.bundle.price}</span>
                       {canBuy ? (
-                        <a
-                          href={buildWhatsAppLink(mod.bundle.id, mod.bundle.title, mod.bundle.price, buyerName.trim(), mpesaMessage.trim())}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
+                        <a href={buildWhatsAppLink(mod.bundle.id, mod.bundle.title, mod.bundle.price, buyerName.trim(), mpesaMessage.trim(), ref)} target="_blank" rel="noopener noreferrer">
                           Buy bundle
                         </a>
                       ) : (
@@ -147,13 +155,7 @@ export default function Home() {
         <p>Pay via M-Pesa/Pochi, confirm on WhatsApp. Your link is sent within a few hours and stays open for 72 hours.</p>
       </footer>
 
-      <a
-       href={buildSupportLink()}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="support-fab"
-        aria-label="Chat with support on WhatsApp"
-      >
+      <a href={buildSupportLink()} target="_blank" rel="noopener noreferrer" className="support-fab" aria-label="Chat with support on WhatsApp">
         💬 Support
       </a>
 
